@@ -4,13 +4,13 @@ use file_io
 implicit none
 
 ! DATA DICTIONARY
-real                    ::  mesh_size, x_dim=1.0, y_dim=1.0
+real                    ::  mesh_size, x_dim=1.0_wp, y_dim=1.0_wp
 integer                 ::  n, m
 real,allocatable        ::  a_p(:,:), a_n(:,:), a_s(:,:), a_e(:,:), a_w(:,:), phi(:,:), gamma(:,:)
 real,allocatable        ::  x(:),y(:)
 integer                 ::  i,j,k,h
-real                    ::  delta,relaxation=0.8
-real                    ::  rms,rms_old,e,error=1.0E-5
+real                    ::  delta,relaxation=0.8_wp
+real                    ::  rss,rss_old,e,error=1.0E-5_wp
 
 character(40),parameter ::  output_dir = 'output'
 integer                 ::  convergence_file,phi_file,axes_file
@@ -46,10 +46,10 @@ allocate(x(0:n+1))
 allocate(y(0:m+1))
 
 ! INITIALIZE THE ARRAY VALUES
-gamma = 1.0
-phi = 0.0
-x = 0.0
-y = 0.0
+gamma = 1.0_wp
+phi = 0.0_wp
+x = 0.0_wp
+y = 0.0_wp
 a_n = gamma
 a_s = gamma
 a_w = gamma
@@ -57,22 +57,22 @@ a_e = gamma
 
 ! -- Boundaries and other initializations
 do i=1,n
-  phi(i,m+1) = (real(i)-.5)*mesh_size
-  x(i) = (real(i)-.5)*mesh_size
-  a_n(i,m) = 2*a_n(i,m)
-  a_s(i,1) = 2*a_s(i,1)
+  phi(i,m+1) = (real(i)-.5_wp)*mesh_size
+  x(i) = (real(i)-.5_wp)*mesh_size
+  a_n(i,m) = 2.0_wp*a_n(i,m)
+  a_s(i,1) = 2.0_wp*a_s(i,1)
 end do
 
 do j=1,m
-  phi(n+1,j) = (real(j)-.5)*mesh_size
-  y(j) = (real(j)-.5)*mesh_size
-  a_e(n,j) = 2*a_e(n,j)
-  a_w(1,j) = 2*a_w(1,j)
+  phi(n+1,j) = (real(j)-.5_wp)*mesh_size
+  y(j) = (real(j)-.5_wp)*mesh_size
+  a_e(n,j) = 2.0_wp*a_e(n,j)
+  a_w(1,j) = 2.0_wp*a_w(1,j)
 end do
 
-phi(n+1,m+1) = 1.0
-x(n+1) = 1.0
-y(m+1) = 1.0
+phi(n+1,m+1) = 1.0_wp
+x(n+1) = 1.0_wp
+y(m+1) = 1.0_wp
 
 write(axes_file,"(A,' ',A)")'x','y'
 do k=0,max(m+1,n+1)
@@ -84,30 +84,33 @@ a_p = a_w + a_e + a_n + a_s
 
 ! ITERATE
 ! Goes through a maximum of 10000 iterations, but stops once
-! RMS change is less than the specified value for three iterations.
-h=0
-write(convergence_file,"(3(A,' '),A)")'ITER','RMS','dRMS','H'
+! RSS change is less than the specified value for three 
+! consecutive iterations.
+h = 0
+write(convergence_file,"(3(A,' '),A)")'ITER','RSS','dRSS','H'
 do k=1,10000
-  rms = 0.0
+  rss = 0.0_wp
   do i=1,n
     do j=1,m
       delta = (relaxation/a_p(i,j))*(a_w(i,j)*phi(i-1,j) + a_e(i,j)*phi(i+1,j) + a_n(i,j)*phi(i,j+1) + a_s(i,j)*phi(i,j-1) &
         - a_p(i,j)*phi(i,j))
       phi(i,j) = phi(i,j) + delta
       e = abs(phi(i,j) - x(i)*y(j))
-      rms = rms + e**2
+      rss = rss + e**2
     end do
   end do
-  rms = sqrt(rms)
-  if (abs(rms-rms_old) < error) then
+  rss = sqrt(rss)
+  if (abs(rss-rss_old) < error) then
     h = h + 1
+  else
+    h = 0
   endif
-  !write(convergence_file,"(I4,' ',2(F10.7,' '),I1)")k,rms,abs(rms-rms_old),h
-  write(convergence_file,*)k,rms,abs(rms-rms_old),h
+  !write(convergence_file,"(I4,' ',2(F10.7,' '),I1)")k,rss,abs(rss-rss_old),h
+  write(convergence_file,*)k,rss,abs(rss-rss_old),h
   if (h >= 3) then
     exit
   endif
-  rms_old = rms
+  rss_old = rss
 end do
 
 ! WRITE SOLUTION
