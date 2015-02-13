@@ -12,12 +12,13 @@ real(wp)									::	b
 real(wp),parameter							::	density = 1.0_wp
 real(wp),parameter							::	u = 2.0_wp, v=2.0_wp
 real(wp),parameter							::	xsize = 1.0_wp, ysize = 1.0_wp
-integer,parameter							::	max_iter = 1
-real(wp),parameter							::	a_error = 1.0E-5_wp
+integer,parameter							::	max_iter = 10000
+real(wp),parameter							::	a_error = 1.0E-7_wp
 character(40),parameter 					::  output_dir = 'output'
 
 ! -- Intermediate values
 real(wp)									::	dx, dy
+real(wp)									::	rms,rms_old,drms,phi_old
 real(wp),allocatable,dimension(:,:)			::	a_p1, a_n1, a_s1, a_e1, a_w1
 real(wp),allocatable,dimension(:,:)			::	a_p2, a_n2, a_s2, a_e2, a_w2
 real(wp),allocatable,dimension(:,:)			::	F_e, F_w, F_n, F_s
@@ -112,23 +113,42 @@ a_s2 = F_s*0.5_wp
 a_p2 = a_w2 + a_e2 + a_s2 + a_n2
 
 ! CALCULATIONS
+rms = 0.0_wp
 do k=1,max_iter
+	rms_old = rms
+	rms = 0.0_wp
 	do i=1,n
 		do j=1,n
+			phi_old = phi(i,j)
+			phi(i,j) = upwind(b)
 			if (i == n) then
 				phi(i+1,j) = phi(i,j)
 			end if
 			if (j == n) then
 				phi(i,j+1) = phi(i,j)
 			end if
-			phi(i,j) = (1.0_wp/a_p1(i,j)) * (a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1))
+			rms = rms + (phi_old - phi(i,j))**2
 		end do
 	end do
+	rms = sqrt(rms)
+	drms = abs(rms-rms_old)
+	write(convergence_file,*)k,drms
+	write(*,*)k,drms
+	if (drms < a_error) then
+		exit
+	end if
 end do
-phi(n,n) = 0.5_wp*(phi(n-1,n)+phi(n,n-1))
+phi(n+1,n+1) = 0.5_wp*(phi(n,n+1)+phi(n+1,n))
 
-do j=n,1,-1
-	write(phi_file,*)phi(1:n,j)
+do j=0,n+1
+	write(phi_file,*)phi(j,:)
+	if (j == 0) then
+		write(axes_file,*)0,0
+	else if (j == n+1) then
+		write(axes_file,*)xsize,ysize
+	else
+		write(axes_file,*)(2.0_wp*real(j)-1)*dx/2.0_wp,(2.0_wp*real(j)-1)*dy/2.0_wp
+	end if
 end do
 
 
@@ -154,25 +174,7 @@ deallocate(F_s)
 deallocate(phi)
 
 
-contains
-	function upwind_order(order)
-		! INPUTS
-		integer						::	order
-		
-		! OUTPUTS
-		real(wp)					::	upwind_order
-		
-		! INTERNAL VARIABLES
-		
-		! CALCULATIONS
-		if (order == 1) then
-		
-		else if (order == 1) then
-		
-		end if
-		
-	end function upwind_order
-	
+contains	
 	function upwind(beta)
 		! INPUTS
 		real(wp)					::	beta
@@ -183,7 +185,10 @@ contains
 		! INTERNAL VARIABLES
 		
 		! CALCULATIONS
-		upwind = upwind_order(1) !-beta*(upwind(2) - upwind(1))
+		upwind = (1.0_wp/a_p1(i,j))*(a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1)) &
+			- (beta/a_p1(i,j))*(a_p2(i,j)*phi(i,j) - a_e2(i,j)*phi(i+1,j) - a_w2(i,j)*phi(i-1,j) &
+				- a_n2(i,j)*phi(i,j+1) - a_s2(i,j)*phi(i,j-1) &
+				- a_p1(i,j)*phi(i,j) + a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1))
 	end function upwind
 
 
