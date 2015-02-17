@@ -13,8 +13,8 @@ cross = transpose(cross)
 
 % Make plots
 figure;
-contourf(axes(:,1),axes(:,2),phi,v);
-figure;
 semilogy(conv(:,1),conv(:,2));
 figure;
 plot(axes(:,1),cross);
+figure;
+contourf(axes(:,1),axes(:,2),phi,v);

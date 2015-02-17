@@ -1,32 +1,40 @@
 program main
+! 	2D CONVECTION UPWINDING
+!
+! 	Author: Spencer Salisbury
+!     Date: February 2015
+!
+!	This code demonstrates two dimensional upwinding. It was written
+!	for an MAE 5440 class at Utah State University.
 use config
 use file_io
 implicit none
 
 ! DATA DICTIONARY
 ! -- Inputs
-integer										::	n
-real(wp)									::	b
+integer										::	n	! The number of cells in one direction
+real(wp)									::	b	! The beta value for deferred correction
 
 ! -- Parameters						
-real(wp),parameter							::	density = 1.0_wp
-real(wp),parameter							::	u = 2.0_wp, v=2.0_wp
-real(wp),parameter							::	xsize = 1.0_wp, ysize = 1.0_wp
-integer,parameter							::	max_iter = 10000
-real(wp),parameter							::	a_error = 1.0E-7_wp
-character(40),parameter 					::  output_dir = 'output'
+real(wp),parameter							::	density = 1.0_wp				! Density
+real(wp),parameter							::	u = 2.0_wp, v=2.0_wp			! Velocities in the x and y direction
+real(wp),parameter							::	xsize = 1.0_wp, ysize = 1.0_wp	! Size of the mesh in each direction
+integer,parameter							::	max_iter = 10000				! The maximum number of iterations
+real(wp),parameter							::	a_error = 1.0E-7_wp				! The acceptable RSS error to stop at
+character(40),parameter 					::  output_dir = 'output'			! The output directory
 
 ! -- Intermediate values
-real(wp)									::	dx, dy
-real(wp)									::	rms,rms_old,drms,phi_old
-real(wp),allocatable,dimension(:,:)			::	a_p1, a_n1, a_s1, a_e1, a_w1
-real(wp),allocatable,dimension(:,:)			::	a_p2, a_n2, a_s2, a_e2, a_w2
-real(wp),allocatable,dimension(:,:)			::	F_e, F_w, F_n, F_s
-integer										::	i,j,k
-integer                 					::  convergence_file,phi_file,axes_file
+real(wp)									::	dx, dy									! The calculated size of the cells in both directions
+real(wp)									::	rss,rss_old,drss,phi_old				! Error storage and comparison variables
+real(wp),allocatable,dimension(:,:)			::	a_p1, a_n1, a_s1, a_e1, a_w1			! First order upwinding coefficients
+real(wp),allocatable,dimension(:,:)			::	a_p2, a_n2, a_s2, a_e2, a_w2			! Second order upwinding coefficients
+real(wp),allocatable,dimension(:,:)			::	F_e, F_w, F_n, F_s						! Flux
+integer										::	i,j,k									! Counters
+integer                 					::  convergence_file,phi_file,axes_file		! File units
 
 ! -- Calculated values
-real(wp),allocatable,dimension(:,:)			::	phi
+real(wp),allocatable,dimension(:,:)			::	phi		! The fluid scalar to be upwinded
+
 
 ! GET VALUES FROM USER
 write(*,*)'Enter number of cells:'
@@ -113,10 +121,10 @@ a_s2 = F_s*0.5_wp
 a_p2 = a_w2 + a_e2 + a_s2 + a_n2
 
 ! CALCULATIONS
-rms = 0.0_wp
+rss = 0.0_wp
 do k=1,max_iter
-	rms_old = rms
-	rms = 0.0_wp
+	rss_old = rss
+	rss = 0.0_wp
 	do i=1,n
 		do j=1,n
 			phi_old = phi(i,j)
@@ -127,14 +135,14 @@ do k=1,max_iter
 			if (j == n) then
 				phi(i,j+1) = phi(i,j)
 			end if
-			rms = rms + (phi_old - phi(i,j))**2
+			rss = rss + (phi_old - phi(i,j))**2
 		end do
 	end do
-	rms = sqrt(rms)
-	drms = abs(rms-rms_old)
-	write(convergence_file,*)k,drms
-	write(*,*)k,drms
-	if (drms < a_error) then
+	rss = sqrt(rss)
+	drss = abs(rss-rss_old)
+	write(convergence_file,*)k,drss
+	write(*,*)k,drss
+	if (drss < a_error) then
 		exit
 	end if
 end do
@@ -150,11 +158,6 @@ do j=0,n+1
 		write(axes_file,*)(2.0_wp*real(j)-1)*dx/2.0_wp,(2.0_wp*real(j)-1)*dy/2.0_wp
 	end if
 end do
-
-
-
-
-
 
 ! DEALLOCATE ARRAYS
 deallocate(a_p1)
@@ -173,7 +176,6 @@ deallocate(F_n)
 deallocate(F_s)
 deallocate(phi)
 
-
 contains	
 	function upwind(beta)
 		! INPUTS
@@ -182,26 +184,11 @@ contains
 		! OUTPUTS
 		real(wp)					::	upwind
 		
-		! INTERNAL VARIABLES
-		
 		! CALCULATIONS
 		upwind = (1.0_wp/a_p1(i,j))*(a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1)) &
 			- (beta/a_p1(i,j))*(a_p2(i,j)*phi(i,j) - a_e2(i,j)*phi(i+1,j) - a_w2(i,j)*phi(i-1,j) &
 				- a_n2(i,j)*phi(i,j+1) - a_s2(i,j)*phi(i,j-1) &
 				- a_p1(i,j)*phi(i,j) + a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1))
 	end function upwind
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 end program main
