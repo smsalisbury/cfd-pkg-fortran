@@ -1,0 +1,16 @@
+&FLUID_PROPERTIES
+	density			=	1.0
+/
+
+&BOUNDARY_CONDITIONS
+	bc_top_type		=	'velocity'
+	bc_right_type	=	'wall'
+	bc_bottom_type	=	'wall'
+	bc_left_type	=	'wall'
+/
+
+&INITIAL_CONDITIONS
+	ic_type			=	'uniform'
+	ic_u			=	0.0
+	ic_v			=	0.0
+/
