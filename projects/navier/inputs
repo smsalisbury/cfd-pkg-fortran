@@ -13,4 +13,12 @@
 	ic_type			=	'uniform'
 	ic_u			=	0.0
 	ic_v			=	0.0
+	ic_P			=	0.0
+/
+
+&MESH_PROPERTIES
+	x_steps			=	4
+	y_steps			=	4
+	x_size			=	1
+	y_size			=	1
 /
