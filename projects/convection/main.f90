@@ -100,15 +100,6 @@ F_n = density*v
 F_s = density*v
 phi = 0.0_wp
 
-! DIRICHLET BOUNDARIES
-do i=0,n+1
-	phi(i,0) = 0.0_wp
-end do
-do j=0,n+1
-	phi(0,j) = 100.0_wp
-end do
-phi(0,0) = 50.0_wp
-
 ! SET CONSTANTS
 a_w1 = F_w
 a_s1 = F_s
@@ -118,6 +109,24 @@ a_e2 = -F_e*0.5_wp
 a_n2 = -F_n*0.5_wp
 a_w2 = F_w*0.5_wp
 a_s2 = F_s*0.5_wp
+
+! DIRICHLET BOUNDARIES
+do i=0,n+1
+	phi(i,0) = 0.0_wp
+end do
+do j=0,n+1
+	phi(0,j) = 100.0_wp
+end do
+phi(0,0) = 50.0_wp
+
+do i=1,n
+	a_w2(1,i) = F_w(1,i)
+	a_e2(n,i) = F_e(n,i)
+enddo
+do j=1,n
+	a_s2(j,1) = F_s(j,1)
+	a_n2(j,n) = F_n(j,n)
+enddo
 a_p2 = a_w2 + a_e2 + a_s2 + a_n2
 
 ! CALCULATIONS
@@ -184,11 +193,23 @@ contains
 		! OUTPUTS
 		real(wp)					::	upwind
 		
+		! INTERNAL
+		real(wp)					::	A,B,C,D,E,F,G,H,L,M
+
 		! CALCULATIONS
-		upwind = (1.0_wp/a_p1(i,j))*(a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1)) &
-			- (beta/a_p1(i,j))*(a_p2(i,j)*phi(i,j) - a_e2(i,j)*phi(i+1,j) - a_w2(i,j)*phi(i-1,j) &
-				- a_n2(i,j)*phi(i,j+1) - a_s2(i,j)*phi(i,j-1) &
-				- a_p1(i,j)*phi(i,j) + a_w1(i,j)*phi(i-1,j) + a_s1(i,j)*phi(i,j-1))
+		A = 0.0_wp
+		B = a_w1(i,j)*phi(i-1,j)
+		C = a_s1(i,j)*phi(i,j-1)
+		D = 0.0_wp
+		E = a_p1(i,j)*phi(i,j)
+		F = a_p2(i,j)*phi(i,j)
+		G = a_e2(i,j)*phi(i+1,j)
+		H = a_w2(i,j)*phi(i-1,j)
+		L = a_n2(i,j)*phi(i,j+1)
+		M = a_s2(i,j)*phi(i,j-1)
+		
+		upwind = (1.0_wp/a_p1(i,j))*(A + B + C + D) &
+			- (beta/a_p1(i,j))*(F - G - H - L - M - E + A + B + C + D)
 	end function upwind
 
 end program main
