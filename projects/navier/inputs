@@ -1,5 +1,6 @@
 &FLUID_PROPERTIES
 	density			=	1.0
+	viscosity		=	1.0
 /
 
 &BOUNDARY_CONDITIONS
@@ -7,6 +8,8 @@
 	bc_right_type	=	'wall'
 	bc_bottom_type	=	'wall'
 	bc_left_type	=	'wall'
+	
+	bc_top_u_velocity	=	1
 /
 
 &INITIAL_CONDITIONS
@@ -21,4 +24,9 @@
 	y_steps			=	4
 	x_size			=	1
 	y_size			=	1
+/
+
+&ITERATIVE_PROPERTIES
+	relax_mom		=	0.5
+	relax_press		=	1.2
 /
