@@ -28,5 +28,6 @@
 
 &ITERATIVE_PROPERTIES
 	relax_mom		=	0.5
-	relax_press		=	1.2
+	relax_press		=	0.3
+	relax_press_cor	=	1.2
 /

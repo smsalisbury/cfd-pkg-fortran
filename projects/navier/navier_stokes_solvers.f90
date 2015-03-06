@@ -49,7 +49,7 @@ contains
 		enddo
 	end subroutine mass_flow_rates
 
-	subroutine umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel)
+	subroutine umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,store_ap)
 		!	-------------------------------------
 		!	This subroutine solves the u-momentum
 		!	component of the Navier-Stokes Equations.
@@ -66,6 +66,7 @@ contains
 		real(wp),intent(in)					::	rel			!	Relaxation factor
 		
 		!	OUTPUTS
+		real(wp),dimension(:,:),intent(out)	::	store_ap	!	an array to store the ap values
 		
 		!	INOUTS
 		real(wp),dimension(:,:),intent(inout)	::	u			!	u-velocities
@@ -109,6 +110,8 @@ contains
 					AW = max(mw_l,0.0_wp) + viscosity*dy/dx
 					AP = (AN + AE + AS + AW)/rel
 					
+					store_ap(i,j) = AP
+					
 					UN = u(i,j+1)
 					UE = u(i+1,j)
 					US = u(i,j-1)
@@ -123,7 +126,7 @@ contains
 		enddo
 	end subroutine umomentum
 
-	subroutine vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel)
+	subroutine vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,store_ap)
 		!	-------------------------------------
 		!	This subroutine solves the v-momentum
 		!	component of the Navier-Stokes Equations.
@@ -140,6 +143,7 @@ contains
 		real(wp),intent(in)					::	rel			!	Relaxation factor
 		
 		!	OUTPUTS
+		real(wp),dimension(:,:),intent(out)	::	store_ap	!	an array to store the ap values
 		
 		!	INOUTS
 		real(wp),dimension(:,:),intent(inout)	::	v			!	v-velocities
@@ -183,6 +187,8 @@ contains
 					AW = max(mw_l,0.0_wp) + viscosity*dy/dx
 					AP = (AN + AE + AS + AW)/rel
 					
+					store_ap(i,j) = AP
+					
 					VN = v(i,j+1)
 					VE = v(i+1,j)
 					VS = v(i,j-1)
@@ -197,7 +203,146 @@ contains
 		enddo
 	end subroutine vmomentum
 
-
+	subroutine pressure(mu,mv,u,v,P,density,viscosity,dx,dy,rel_c,rel,AP_u,AP_v,continuity)
+		!	-------------------------------------
+		!	This subroutine solves the pressure
+		!	component of the Navier-Stokes Equations.
+		!	Uses an SOR scheme
+		!	-------------------------------------
+		
+		!	INPUTS
+		real(wp),intent(in)					::	density		!	Fluid density
+		real(wp),intent(in)					::	viscosity	!	Fluid viscosity
+		real(wp),intent(in)					::	dx,dy		!	Mesh parameters
+		real(wp),dimension(:,:),intent(in)	::	mu,mv		!	Mass flow rates
+		real(wp),intent(in)					::	rel,rel_c	!	Relaxation factor
+		real(wp),dimension(:,:),intent(in)	::	AP_u,AP_v	!	APs from momentum solvers
+		
+		!	OUTPUTS
+		real(wp),dimension(:,:)				::	continuity				!	Source terms
+		
+		!	INOUTS
+		real(wp),dimension(:,:),intent(inout)	::	P			!	Pressures
+		real(wp),dimension(:,:),intent(inout)	::	u			!	u-velocities
+		real(wp),dimension(:,:),intent(inout)	::	v			!	v-velocities
+		
+		!	INTERNAL
+		integer								::	i,j,i_offset,j_offset
+		integer								::	k
+		integer,parameter					::	max_iter = 10
+		integer								::	x_steps,y_steps
+		real(wp)							::	an_v,ae_u,as_v,aw_u		!	Relative velocity coefficients
+		real(wp)							::	PN,PS,PE,PW,PP			!	Local pressures
+		real(wp)							::	vn,ue,vs,uw				!	Local velocities
+		real(wp)							::	AN,AE,AS,AW,AP
+		real(wp)							::	tmp
+		real(wp),dimension(:,:),allocatable	::	P_c						!	Pressure correction
+		real(wp),dimension(:,:),allocatable	::	S						!	Source terms
+		
+		!	CALCULATE NEW U_MOMENTUM
+		x_steps = size(P,1)
+		y_steps = size(P,2)
+		
+		allocate(P_c(x_steps,y_steps))
+		P_c = 0.0_wp
+		allocate(S(x_steps,y_steps))
+		
+		do j = 1,y_steps
+			do i = 1,x_steps
+				!	Counter offsets for u and v-momentum
+				i_offset = i+1
+				j_offset = j+1
+			
+				!	Relative velocity coefficients
+				an_v = AP_v(i_offset,j_offset+1)
+				ae_u = AP_u(i_offset+1,j_offset)
+				as_v = AP_v(i_offset,j_offset)
+				aw_u = AP_u(i_offset,j_offset)
+				
+				!	Pressure correction
+				AN = (density*dx**2)/an_v
+				AE = (density*dy**2)/ae_u
+				AS = (density*dx**2)/as_v
+				AW = (density*dy**2)/aw_u
+				if (abs(an_v) < 1.0E-5_wp) AN = 0.0_wp
+				if (abs(ae_u) < 1.0E-5_wp) AE = 0.0_wp
+				if (abs(as_v) < 1.0E-5_wp) AS = 0.0_wp
+				if (abs(aw_u) < 1.0E-5_wp) AW = 0.0_wp
+				vn = v(i_offset,j_offset+1)
+				ue = u(i_offset+1,j_offset)
+				vs = v(i_offset,j_offset)
+				uw = u(i_offset,j_offset)
+				
+				S(i,j) = density*((ue-uw)*dy + (vn-vs)*dx)
+				do k = 1,max_iter
+					
+					! 	Local pressures
+					if (i .EQ. 1) then
+						PW = P_c(i,j)
+						AW = 0.0_wp
+					else
+						PW = P_c(i-1,j)
+					endif
+					if (j .EQ. 1) then
+						PS = P_c(i,j)
+						AS = 0.0_wp
+					else
+						PS = P_c(i,j-1)
+					endif
+					if (i .EQ. x_steps) then
+						PE = P_c(i,j)
+						AE = 0.0_wp
+					else
+						PE = P_c(i+1,j)
+					endif
+					if (j .EQ. y_steps) then
+						PN = P_c(i,j)
+						AN = 0.0_wp
+					else
+						PN = P_c(i,j+1)
+					endif
+					AP = (AN + AE + AS + AW)
+					
+					
+					if (abs(AP) > 1.0E-5_wp) then
+						P_c(i,j) = P_c(i,j) + (rel_c/AP)*(AN*PN + AE*PE + AS*PS + AW*PW - S(i,j) - AP*P_c(i,j))
+					endif
+				enddo
+				PP = P_c(i,j)
+				
+				P(i,j) = P(i,j) + rel*P_c(i,j)
+				
+			enddo
+		enddo
+		
+		!	UPDATE U-MOMENTUM
+		do i=2,x_steps
+			do j=1,y_steps
+				!	Counter offsets for u and v-momentum
+				i_offset = i+1
+				j_offset = j+1
+				
+				!	Velocity Corrections
+				if (abs(ae_u) > 1.0E-5_wp) u(i_offset+1,j_offset) = u(i_offset+1,j_offset) + (dy/ae_u)*(PP - PE)
+				if (abs(aw_u) > 1.0E-5_wp) u(i_offset,j_offset) = u(i_offset,j_offset) + (dy/aw_u)*(PW - PP)
+			enddo
+		enddo
+		
+		!	UPDATE V-MOMENTUM
+		do i=1,x_steps
+			do j=2,y_steps
+				!	Counter offsets for u and v-momentum
+				i_offset = i+1
+				j_offset = j+1
+				
+				!	Velocity Corrections
+				if (abs(an_v) > 1.0E-5_wp) v(i_offset,j_offset+1) = v(i_offset,j_offset+1) + (dx/an_v)*(PP - PN)
+				if (abs(as_v) > 1.0E-5_wp) v(i_offset,j_offset) = v(i_offset,j_offset) + (dx/as_v)*(PS - PP)
+			enddo
+		enddo
+		
+		deallocate(P_c)
+	end subroutine pressure
 
 
 

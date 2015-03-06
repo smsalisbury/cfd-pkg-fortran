@@ -34,11 +34,14 @@ real(wp)							::	dx,dy
 real(wp)							::	x_coord,y_coord
 
 !	--	Iterative Properties
-real(wp)							::	relax_mom,relax_press
+real(wp)							::	relax_mom,relax_press,relax_press_cor
 
 !	--	Things to solve for
 real(wp),dimension(:,:),allocatable	::	u,v,P
 real(wp),dimension(:,:),allocatable	::	mu,mv
+
+real(wp),dimension(:,:),allocatable	::	AP_u,AP_v
+real(wp),dimension(:,:),allocatable	::	continuity
 
 !	--	Namelist File Stuff
 integer								::	namelist_file,io_stat
@@ -60,7 +63,7 @@ namelist /BOUNDARY_CONDITIONS/ bc_top_type,bc_bottom_type,bc_left_type,bc_right_
 	bc_bottom_u_velocity,bc_bottom_v_velocity,bc_left_u_velocity,bc_left_v_velocity
 namelist /INITIAL_CONDITIONS/ ic_type,ic_u,ic_v,ic_P
 namelist /MESH_PROPERTIES/ x_steps,y_steps,x_size,y_size
-namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press
+namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press,relax_press_cor
 
 !	--	Get namelist from user
 !write(*,*)'Enter input file:'
@@ -111,6 +114,10 @@ dy = y_size/real(y_steps,wp)
 allocate(u(0:x_steps+1,0:y_steps+1))
 allocate(v(0:x_steps+1,0:y_steps+1))
 allocate(P(1:x_steps,1:y_steps))
+allocate(continuity(1:x_steps,1:y_steps))
+
+allocate(AP_u(0:x_steps+1,0:y_steps+1))
+allocate(AP_v(0:x_steps+1,0:y_steps+1))
 
 allocate(mu(0:x_steps+1,0:y_steps+1))
 allocate(mv(0:x_steps+1,0:y_steps+1))
@@ -126,6 +133,9 @@ select case (ic_type)
 endselect
 mu = 0.0_wp
 mv = 0.0_wp
+
+AP_u = 0.0_wp
+AP_v = 0.0_wp
 
 !	--	Set Dirichlet Boundaries
 !		--	Top boundary
@@ -218,19 +228,28 @@ do k=1,(max(x_steps,y_steps)+1)
 enddo
 
 !	BEGIN SOLUTION
-!	--	MASS FLOW RATES
-call mass_flow_rates(mu,mv,u,v,P,density,viscosity,dx,dy)
-!	--	U-MOMENTUM
-call umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom)
-!	--	V-MOMENTUM
-call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom)
-
+do k=1,3
+	!	--	MASS FLOW RATES
+	call mass_flow_rates(mu,mv,u,v,P,density,viscosity,dx,dy)
+	!	--	U-MOMENTUM
+	call umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_u)
+	!	--	V-MOMENTUM
+	call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_v)
+	!	--	PRESSURES
+	call pressure(mu,mv,u,v,P,density,viscosity,dx,dy,relax_press_cor,relax_press,AP_u,AP_v,continuity)
+	call write_array(continuity,'cont=')
+enddo
 
 call write_array(mu,'mu=')
 call write_array(mv,'mv=')
 
 call write_array(u,'u=')
 call write_array(v,'v=')
+call write_array(P,'P=')
+
+call write_array(AP_u,'apu=')
+call write_array(AP_v,'apv=')
+
 
 !	DEALLOCATE ARRAYS
 deallocate(u)
@@ -283,5 +302,24 @@ contains
 				write(*,*)'Aborting...'
 		endselect
 	end subroutine
-
+	
+	function rms(A)
+		!	---------------------------
+		!	Calculates the rms of an array
+		!	---------------------------
+		real(wp),dimension(:,:)		::	A
+		real(wp)					::	rms
+		
+		integer						::	i,j,i_size,j_size
+		
+		i_size = size(A,1)
+		j_size = size(A,2)
+		rms = 0.0_wp
+		do i=1,i_size
+			do j=1,j_size
+				rms = rms + A(i,j)**2
+			enddo
+		enddo
+		rms = sqrt(rms)/real(i_size*j_size,wp)
+	end function rms
 end program
