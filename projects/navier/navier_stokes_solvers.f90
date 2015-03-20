@@ -341,6 +341,8 @@ contains
 			enddo
 		enddo
 		
+		continuity = S
+		
 		deallocate(P_c)
 	end subroutine pressure
 

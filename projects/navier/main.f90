@@ -35,6 +35,7 @@ real(wp)							::	x_coord,y_coord
 
 !	--	Iterative Properties
 real(wp)							::	relax_mom,relax_press,relax_press_cor
+real(wp)							::	conv_error
 
 !	--	Things to solve for
 real(wp),dimension(:,:),allocatable	::	u,v,P
@@ -42,6 +43,11 @@ real(wp),dimension(:,:),allocatable	::	mu,mv
 
 real(wp),dimension(:,:),allocatable	::	AP_u,AP_v
 real(wp),dimension(:,:),allocatable	::	continuity
+real(wp)							::	cont_rms,cont_rms_old
+integer								::	conv_satisfied = 0
+
+!	--	Graphics arrays
+real(wp),dimension(:,:),allocatable	::	u_g,v_g
 
 !	--	Namelist File Stuff
 integer								::	namelist_file,io_stat
@@ -52,9 +58,12 @@ character(20)						::	output_dir
 integer								::	u_axes_file
 integer								::	v_axes_file
 integer								::	P_axes_file
+integer								::	u_file
+integer								::	v_file
+integer								::	continuity_file
 
 !	--	Counters
-integer								::	k
+integer								::	i,j,k
 
 !	NAMELIST
 namelist /FLUID_PROPERTIES/ density,viscosity
@@ -63,7 +72,7 @@ namelist /BOUNDARY_CONDITIONS/ bc_top_type,bc_bottom_type,bc_left_type,bc_right_
 	bc_bottom_u_velocity,bc_bottom_v_velocity,bc_left_u_velocity,bc_left_v_velocity
 namelist /INITIAL_CONDITIONS/ ic_type,ic_u,ic_v,ic_P
 namelist /MESH_PROPERTIES/ x_steps,y_steps,x_size,y_size
-namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press,relax_press_cor
+namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press,relax_press_cor,conv_error
 
 !	--	Get namelist from user
 !write(*,*)'Enter input file:'
@@ -105,6 +114,9 @@ call create_dir(output_dir)
 u_axes_file		= file_open(trim(output_dir) // '/u_axes.out')
 v_axes_file		= file_open(trim(output_dir) // '/v_axes.out')
 P_axes_file		= file_open(trim(output_dir) // '/P_axes.out')
+u_file			= file_open(trim(output_dir) // '/u.out')
+v_file			= file_open(trim(output_dir) // '/v.out')
+continuity_file	= file_open(trim(output_dir) // '/continuity.out')
 
 !	SETUP MESH
 dx = x_size/real(x_steps,wp)
@@ -228,7 +240,8 @@ do k=1,(max(x_steps,y_steps)+1)
 enddo
 
 !	BEGIN SOLUTION
-do k=1,3
+cont_rms_old = 0.0_wp
+do k=1,3000
 	!	--	MASS FLOW RATES
 	call mass_flow_rates(mu,mv,u,v,P,density,viscosity,dx,dy)
 	!	--	U-MOMENTUM
@@ -237,29 +250,73 @@ do k=1,3
 	call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_v)
 	!	--	PRESSURES
 	call pressure(mu,mv,u,v,P,density,viscosity,dx,dy,relax_press_cor,relax_press,AP_u,AP_v,continuity)
-	call write_array(continuity,'cont=')
+	
+	cont_rms = rms(continuity)
+	write(continuity_file,*)k,cont_rms,abs(cont_rms - cont_rms_old)
+	write(*,*)k,cont_rms,abs(cont_rms - cont_rms_old)
+	
+	if (abs(cont_rms - cont_rms_old) < conv_error) then
+		conv_satisfied = conv_satisfied + 1
+	else
+		conv_satisfied = 0
+	endif
+	
+	if (conv_satisfied >= 3) exit
+	
+	cont_rms_old = cont_rms
 enddo
 
-call write_array(mu,'mu=')
-call write_array(mv,'mv=')
+! call write_array(mu,'mu=')
+! call write_array(mv,'mv=')
 
-call write_array(u,'u=')
-call write_array(v,'v=')
-call write_array(P,'P=')
+! call write_array(u,'u=')
+! call write_array(v,'v=')
+! call write_array(P,'P=')
 
-call write_array(AP_u,'apu=')
-call write_array(AP_v,'apv=')
+! call write_array(AP_u,'apu=')
+! call write_array(AP_v,'apv=')
 
+!	PREPARE DATA FOR GRAPHICS
+allocate(u_g(x_steps,y_steps))
+allocate(v_g(x_steps,y_steps))
+u_g = 0.0_wp
+v_g = 0.0_wp
+
+do i=1,x_steps
+	do j=1,y_steps
+		u_g(i,j) = 0.5_wp*(u(i,j) + u(i+1,j))
+		v_g(i,j) = 0.5_wp*(v(i,j) + v(i,j+1))
+	enddo
+enddo
+
+do k=1,y_steps
+	write(u_file,*)u_g(:,k)
+	write(v_file,*)v_g(:,k)
+enddo
 
 !	DEALLOCATE ARRAYS
 deallocate(u)
 deallocate(v)
 deallocate(P)
 
+deallocate(u_g)
+deallocate(v_g)
+
+deallocate(mu)
+deallocate(mv)
+
+deallocate(AP_u)
+deallocate(AP_v)
+
+deallocate(continuity)
+
 !	CLOSE OUTPUT FILES
 close(u_axes_file)
 close(v_axes_file)
 close(P_axes_file)
+close(u_file)
+close(v_file)
+close(continuity_file)
 
 contains
 	subroutine write_array(A,annotation)
@@ -301,7 +358,7 @@ contains
 				write(*,*)"Unfortunately, we don't know what."
 				write(*,*)'Aborting...'
 		endselect
-	end subroutine
+	end subroutine prog_error
 	
 	function rms(A)
 		!	---------------------------
