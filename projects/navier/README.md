@@ -1,10 +1,10 @@
 # 2D Navier-Stokes Solver
 
 ######  Author: Spencer Salisbury
-<hr />
+-------------------------------
 
 ### Description
-This project solves the Navier-Stokes equations for a specified 2D enclosure. This project was developed in March and April of 2015.
+This project solves the Navier-Stokes equations for a specified 2D enclosure. This project was developed in March and April of 2015. Note that for now, this project only works for laminar flows.
 
 Check the repository README.md for general information, such as configuration and compilation instructions.
 
@@ -32,3 +32,29 @@ This project uses namelists to allow varying multiple input values without recom
 </table>
 
 ##### Boundary Conditions
+The following are possible boundary types:
+* wall
+* velocity
+
+###### Wall
+The "wall" boundary type is straight-forward. It sets the velocities in both directions to 0 at the boundaries. No additional specifications are necessary.
+
+###### Velocity
+The "velocity" boundary type is used if a uniform velocity is to be set across the boundary. It is useful for problems such as the classic Lid Driven Cavity problem. If this type is chosen, the corresponding boundary velocitys should also be set. If it is not set, the values default to 0.
+<table>
+<tr><th>Boundary</th><th>Velocity variables</th></tr>
+<tr><td rowspan=2>Top</td><td>bc_top_u_velocity</td></tr>
+<tr><td>bc_top_v_velocity</td></tr>
+<tr><td rowspan=2>Right</td><td>bc_bottom_u_velocity</td></tr>
+<tr><td>bc_bottom_v_velocity</td></tr>
+<tr><td rowspan=2>Bottom</td><td>bc_right_u_velocity</td></tr>
+<tr><td>bc_right_v_velocity</td></tr>
+<tr><td rowspan=2>Left</td><td>bc_left_u_velocity</td></tr>
+<tr><td>bc_left_v_velocity</td></tr>
+</table>
+
+##### Initial Conditions
+
+##### Mesh Properties
+
+##### Iterative Properties
