@@ -98,8 +98,10 @@ bc_bottom_v_velocity = 0.0_wp
 bc_left_u_velocity = 0.0_wp
 bc_left_v_velocity = 0.0_wp
 
-relax_mom = 1.0_wp
-relax_press = 1.2_wp
+relax_mom = 0.5_wp
+relax_press = 0.3_wp
+relax_press_cor = 1.2_wp
+conv_error = 1.0E-5_wp
 
 !	-- 	Read in namelists
 namelist_file = file_open(adjustl(trim(namelist_file_name)))
