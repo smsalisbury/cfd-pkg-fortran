@@ -18,7 +18,7 @@ FCFLAGS = -g -O2 -fbounds-check
 
 # Program name
 PROGRAM = a.out
-MOD_OBJECTS = config.o file_io.o navier_stokes_solvers.o main.o
+MOD_OBJECTS = config.o file_io.o gnuplot.o navier_stokes_solvers.o main.o
 
 # ======================
 # MAKE COMMANDS
@@ -43,6 +43,9 @@ navier_stokes_solvers.o:
 	
 file_io.o:
 	$(FC) $(FCFLAGS) -c $(FILENAME) $(MOD_DIR)/file_io.f90
+	
+gnuplot.o:
+	$(FC) $(FCFLAGS) -c $(FILENAME) $(MOD_DIR)/gnuplot.f90
 
 # Special - make clean
 clean:

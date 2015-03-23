@@ -2,6 +2,7 @@ program main
 use config
 use file_io
 use navier_stokes_solvers
+use gnuplot
 implicit none
 
 !	-----------------------------------------------------
@@ -48,6 +49,7 @@ integer								::	conv_satisfied = 0
 
 !	--	Graphics arrays
 real(wp),dimension(:,:),allocatable	::	u_g,v_g
+real(wp),dimension(:),allocatable	::	x_g,y_g
 
 !	--	Namelist File Stuff
 integer								::	namelist_file,io_stat
@@ -111,12 +113,12 @@ close(namelist_file)
 !	SETUP AND OPEN OUTPUT FILES
 output_dir = 'outputs'
 call create_dir(output_dir)
-u_axes_file		= file_open(trim(output_dir) // '/u_axes.out')
-v_axes_file		= file_open(trim(output_dir) // '/v_axes.out')
-P_axes_file		= file_open(trim(output_dir) // '/P_axes.out')
-u_file			= file_open(trim(output_dir) // '/u.out')
-v_file			= file_open(trim(output_dir) // '/v.out')
-continuity_file	= file_open(trim(output_dir) // '/continuity.out')
+u_axes_file		= file_open(trim(output_dir) // '/u_axes.dat')
+v_axes_file		= file_open(trim(output_dir) // '/v_axes.dat')
+P_axes_file		= file_open(trim(output_dir) // '/P_axes.dat')
+u_file			= file_open(trim(output_dir) // '/u.dat')
+v_file			= file_open(trim(output_dir) // '/v.dat')
+continuity_file	= file_open(trim(output_dir) // '/continuity.dat')
 
 !	SETUP MESH
 dx = x_size/real(x_steps,wp)
@@ -253,7 +255,7 @@ do k=1,3000
 	
 	cont_rms = rms(continuity)
 	write(continuity_file,*)k,cont_rms,abs(cont_rms - cont_rms_old)
-	write(*,*)k,cont_rms,abs(cont_rms - cont_rms_old)
+	!write(*,*)k,cont_rms,abs(cont_rms - cont_rms_old)
 	
 	if (abs(cont_rms - cont_rms_old) < conv_error) then
 		conv_satisfied = conv_satisfied + 1
@@ -279,6 +281,8 @@ enddo
 !	PREPARE DATA FOR GRAPHICS
 allocate(u_g(x_steps,y_steps))
 allocate(v_g(x_steps,y_steps))
+allocate(x_g(x_steps))
+allocate(y_g(y_steps))
 u_g = 0.0_wp
 v_g = 0.0_wp
 
@@ -286,6 +290,8 @@ do i=1,x_steps
 	do j=1,y_steps
 		u_g(i,j) = 0.5_wp*(u(i,j) + u(i+1,j))
 		v_g(i,j) = 0.5_wp*(v(i,j) + v(i,j+1))
+		x_g(i) = dx*real(i,wp)-0.5_wp*dx
+		y_g(i) = dy*real(i,wp)-0.5_wp*dy
 	enddo
 enddo
 
@@ -294,6 +300,9 @@ do k=1,y_steps
 	write(v_file,*)v_g(:,k)
 enddo
 
+!	PLOTS
+call vector_plot(x_g,y_g,u_g,v_g,3.0_wp)
+
 !	DEALLOCATE ARRAYS
 deallocate(u)
 deallocate(v)
@@ -301,6 +310,8 @@ deallocate(P)
 
 deallocate(u_g)
 deallocate(v_g)
+deallocate(x_g)
+deallocate(y_g)
 
 deallocate(mu)
 deallocate(mv)

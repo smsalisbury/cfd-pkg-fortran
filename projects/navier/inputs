@@ -20,8 +20,8 @@
 /
 
 &MESH_PROPERTIES
-	x_steps			=	100
-	y_steps			=	100
+	x_steps			=	30
+	y_steps			=	30
 	x_size			=	1
 	y_size			=	1
 /
@@ -30,5 +30,5 @@
 	relax_mom		=	0.5
 	relax_press		=	0.3
 	relax_press_cor	=	1.2
-	conv_error		=	1.0E-14
+	conv_error		=	1.0E-10
 /

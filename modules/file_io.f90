@@ -125,5 +125,14 @@ contains
       call system('mkdir -p '//trim(directory))
     end if
   end subroutine create_dir
+  
+  ! This subroutine deletes a file
+  subroutine rm_file(filename)
+    ! INPUT VARIABLES
+    character(*)    :: filename
+    
+    ! DELETE FILE
+	call system('rm '//trim(filename))
+  end subroutine rm_file
 
 end module file_io
