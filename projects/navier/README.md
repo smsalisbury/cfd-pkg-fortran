@@ -19,16 +19,33 @@ This project uses namelists to allow varying multiple input values without recom
 <tr><td>viscosity</td><td>The viscosity of the fluid.</td><td>Yes</td><td>N/A</td></tr>
 
 <tr><th colspan=99>BOUNDARY_CONDITIONS</th></tr>
-<tr><td>bc_top_type</td><td>The boundary type of the top boundary. See "Boundary Conditions" for options.</td><td>Yes</td><td>N/A</td></tr>
-<tr><td>bc_right_type</td><td>The boundary type of the right boundary. See "Boundary Conditions" for options.</td><td>Yes</td><td>N/A</td></tr>
-<tr><td>bc_bottom_type</td><td>The boundary type of the bottom boundary. See "Boundary Conditions" for options.</td><td>Yes</td><td>N/A</td></tr>
-<tr><td>bc_left_type</td><td>The boundary type of the left boundary. See "Boundary Conditions" for options.</td><td>Yes</td><td>N/A</td></tr>
+<tr><td>bc_top_type</td><td>The boundary type of the top boundary. See "Boundary Conditions" for options.</td><td>No</td><td>wall</td></tr>
+<tr><td>bc_right_type</td><td>The boundary type of the right boundary. See "Boundary Conditions" for options.</td><td>No</td><td>wall</td></tr>
+<tr><td>bc_bottom_type</td><td>The boundary type of the bottom boundary. See "Boundary Conditions" for options.</td><td>No</td><td>wall</td></tr>
+<tr><td>bc_left_type</td><td>The boundary type of the left boundary. See "Boundary Conditions" for options.</td><td>No</td><td>wall</td></tr>
+<tr><td>bc_top_u_velocity</td><td>The u velocity at the top wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_top_v_velocity</td><td>The v velocity at the top wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_right_u_velocity</td><td>The u velocity at the right wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_right_v_velocity</td><td>The v velocity at the right wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_bottom_u_velocity</td><td>The u velocity at the bottom wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_bottom_v_velocity</td><td>The v velocity at the bottom wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_left_u_velocity</td><td>The u velocity at the left wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
+<tr><td>bc_left_v_velocity</td><td>The v velocity at the left wall. Used for 'velocity' type boundaries.</td><td>No</td><td>0</td></tr>
 
 <tr><th colspan=99>INITIAL_CONDITIONS</th></tr>
+<tr><td>ic_type</td><td>The type of initial condition to use. See "Initial Conditions" for options.</td><td>No</td><td>uniform</td></tr>
 
 <tr><th colspan=99>MESH_PROPERTIES</th></tr>
+<tr><td>x_steps</td><td>The number of steps in the x-direction to use.</td><td>Yes</td><td>N/A</td></tr>
+<tr><td>y_steps</td><td>The number of steps in the y-direction to use.</td><td>Yes</td><td>N/A</td></tr>
+<tr><td>x_size</td><td>The total x-dimension size of the mesh.</td><td>Yes</td><td>N/A</td></tr>
+<tr><td>y_size</td><td>The total y-dimension size of the mesh.</td><td>Yes</td><td>N/A</td></tr>
 
 <tr><th colspan=99>ITERATIVE_PROPERTIES</th></tr>
+<tr><td>relax_mom</td><td>Momentum relaxation factor.</td><td>No</td><td>0.5</td></tr>
+<tr><td>relax_press</td><td>Pressure relaxation factor.</td><td>No</td><td>0.3</td></tr>
+<tr><td>relax_press_cor</td><td>Pressure correction relaxation factor.</td><td>No</td><td>1.2</td></tr>
+<tr><td>conv_error</td><td>Convergence condition for continuity.</td><td>No</td><td>1.0E-5</td></tr>
 </table>
 
 ##### Boundary Conditions
