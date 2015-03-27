@@ -1,6 +1,6 @@
 &FLUID_PROPERTIES
 	density			=	1.0
-	viscosity		=	1.0
+	viscosity		=	0.01
 /
 
 &BOUNDARY_CONDITIONS
@@ -20,8 +20,8 @@
 /
 
 &MESH_PROPERTIES
-	x_steps			=	30
-	y_steps			=	30
+	x_steps			=	40
+	y_steps			=	40
 	x_size			=	1
 	y_size			=	1
 /
