@@ -112,7 +112,7 @@ conv_error = 1.0E-5_wp
 
 !	-- 	Read in namelists
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Reading in namelist data.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Reading in namelist data.'
 namelist_file = file_open(adjustl(trim(namelist_file_name)))
 read(namelist_file,FLUID_PROPERTIES,IOSTAT=io_stat)
 read(namelist_file,BOUNDARY_CONDITIONS,IOSTAT=io_stat)
@@ -123,7 +123,7 @@ close(namelist_file)
 
 !	SETUP AND OPEN OUTPUT FILES
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Opening output files.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Opening output files.'
 output_dir = 'outputs'
 call create_dir(output_dir)
 u_axes_file		= file_open(trim(output_dir) // '/u_axes.dat')
@@ -135,7 +135,7 @@ continuity_file	= file_open(trim(output_dir) // '/continuity.dat')
 
 !	SETUP MESH
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Setting up mesh.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Setting up mesh.'
 dx = x_size/real(x_steps,wp)
 dy = y_size/real(y_steps,wp)
 
@@ -153,7 +153,7 @@ allocate(mv(0:x_steps+1,0:y_steps+1))
 
 !	--	Initialize u, v, and P and mass flow rates
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Initializing momentum, pressure, and flow rates.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Initializing momentum, pressure, and flow rates.'
 select case (ic_type)
 	case ("uniform")
 		u = ic_u
@@ -169,7 +169,7 @@ AP_u = 0.0_wp
 AP_v = 0.0_wp
 
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Setting up Dirichlet boundaries.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Setting up Dirichlet boundaries.'
 !	--	Set Dirichlet Boundaries
 !		--	Top boundary
 select case (bc_top_type)
@@ -262,7 +262,7 @@ enddo
 
 !	BEGIN SOLUTION
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Solving navier stokes equations.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Solving navier stokes equations.'
 cont_rms_old = 0.0_wp
 do k=1,3000
 	!	--	MASS FLOW RATES
@@ -289,11 +289,11 @@ do k=1,3000
 	cont_rms_old = cont_rms
 enddo
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'-->Continuity converged to ',cont_rms
+write(*,"(F5.2,A,3X,A,ES10.3)")real(time_clicks-start_time)/real(time_scale),'s','-->Continuity converged to ',cont_rms
 
 !	PREPARE DATA FOR GRAPHICS
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Preparing data for graphics.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Preparing data for graphics.'
 allocate(u_g(x_steps,y_steps))
 allocate(v_g(x_steps,y_steps))
 allocate(x_g(x_steps))
@@ -317,7 +317,7 @@ enddo
 
 !	PLOTS
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Graphing flow field.'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Graphing flow field.'
 call vector_plot2D(x_g,y_g,u_g,v_g,3.0_wp)
 call contour_plot2D(x_g,y_g,arrays_mag(u_g,v_g))
 
@@ -348,7 +348,7 @@ close(v_file)
 close(continuity_file)
 
 call system_clock(time_clicks)
-write(*,*)real(time_clicks-start_time)/real(time_scale),'Finished'
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Finished'
 
 contains
 	subroutine write_array(A,annotation)
