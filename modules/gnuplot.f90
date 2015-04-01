@@ -189,6 +189,69 @@ contains
 		call rm_file(trim(plot_dir) // '/script.dat')
 		call rm_file(trim(plot_dir) // '/contour.dat')
 	end subroutine contour_plot2D
+
+	subroutine scatter_plot2D(x_values,y_values,aspect_ratio_in)
+		!	--------------------------
+		!	This subroutine uses gnuplot to plot
+		!	a 2D scatter plot. x_values and y_values
+		!	are vectors.
+		!	--------------------------
+		
+		!	INPUTS
+		real(wp),dimension(:),intent(in)		::	x_values,y_values
+		real(wp),intent(in),optional			::	aspect_ratio_in
+		
+		!	INTERNAL VARIABLES
+		integer									::	x_size, y_size
+		integer									::	data_file
+		integer									::	script_file
+		
+		integer									::	i,j
+		integer									::	ret
+		
+		integer,parameter						::	img_height = 480
+		real(wp)								::	aspect_ratio !	x to y
+		
+		!	DEFAULTS
+		!	--	Aspect Ratio
+		if (present(aspect_ratio_in)) then
+			aspect_ratio = aspect_ratio_in
+		else
+			aspect_ratio = 1.0_wp
+		endif
+		
+		!	VALIDATION
+		!	--	Sizes must match		
+		x_size = size(x_values)
+		y_size = size(y_values)
+		
+		if (x_size /= y_size) then
+			call gnuplot_error(106)
+		endif
+		
+		!	WRITE DATA TO TEMPORARY FILE
+		!	--	The format for gnuplot is x,y,deltax,deltay
+		call create_dir(trim(plot_dir))
+		data_file = file_open(trim(plot_dir) // '/scatter.dat')
+		do i=1,x_size
+			write(data_file,*)x_values(i),y_values(i)
+		enddo		
+		close(data_file)
+		
+		!	WRITE GNUPLOT SCRIPT
+		script_file = file_open(trim(plot_dir) // '/script.dat')
+		write(script_file,*)"set terminal png size", int(real(img_height,wp)*aspect_ratio), "," , img_height
+		write(script_file,*)"set output '" // trim(plot_dir) // "/scatter.png'"
+		write(script_file,*)"plot '" // trim(plot_dir) // "/scatter.dat' using 1:2 with line notitle"
+		close(script_file)
+		
+		!	PLOT GNUPLOT
+		ret = system("gnuplot " // trim(plot_dir) // "/script.dat")
+	
+		!	CLEANUP
+		call rm_file(trim(plot_dir) // '/script.dat')
+		call rm_file(trim(plot_dir) // '/scatter.dat')
+	end subroutine scatter_plot2D
 	
 	subroutine gnuplot_error(code)
 		!	----------------------------
@@ -229,6 +292,11 @@ contains
 			case (105)
 				write(*,*)"GNUPLOT MODULE ERROR:"
 				write(*,*)"2D Contour Plot: Dimensions of values don't match with dimensions of the y vector."
+				write(*,*)"Aborting..."
+				stop
+			case (106)
+				write(*,*)"GNUPLOT MODULE ERROR:"
+				write(*,*)"2D Scatter Plot: Dimensions of x and y don't match."
 				write(*,*)"Aborting..."
 				stop
 			case default

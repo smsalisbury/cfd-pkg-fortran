@@ -50,6 +50,7 @@ integer								::	conv_satisfied = 0
 !	--	Graphics arrays
 real(wp),dimension(:,:),allocatable	::	u_g,v_g
 real(wp),dimension(:),allocatable	::	x_g,y_g
+real(wp),dimension(:),allocatable	::	continuity_data,iteration_data
 
 !	--	Namelist File Stuff
 integer								::	namelist_file,io_stat
@@ -290,6 +291,10 @@ do k=1,3000
 enddo
 call system_clock(time_clicks)
 write(*,"(F5.2,A,3X,A,ES10.3)")real(time_clicks-start_time)/real(time_scale),'s','-->Continuity converged to ',cont_rms
+allocate(continuity_data(k))
+allocate(iteration_data(k))
+
+close(continuity_file)
 
 !	PREPARE DATA FOR GRAPHICS
 call system_clock(time_clicks)
@@ -315,11 +320,20 @@ do k=1,y_steps
 	write(v_file,*)v_g(:,k)
 enddo
 
+continuity_file	= file_open(trim(output_dir) // '/continuity.dat')
+do k=1,size(continuity_data)
+	read(continuity_file,*)iteration_data(k),continuity_data(k)
+enddo
+
 !	PLOTS
 call system_clock(time_clicks)
 write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Graphing flow field.'
 call vector_plot2D(x_g,y_g,u_g,v_g,3.0_wp)
 call contour_plot2D(x_g,y_g,arrays_mag(u_g,v_g))
+
+call system_clock(time_clicks)
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Graphing convergence.'
+call scatter_plot2D(iteration_data,continuity_data,2.0)
 
 !	DEALLOCATE ARRAYS
 deallocate(u)
