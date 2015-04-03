@@ -23,6 +23,8 @@ real(wp)							::	density,viscosity
 character(20)						::	bc_top_type,bc_left_type,bc_right_type,bc_bottom_type
 real(wp)							::	bc_top_u_velocity,bc_top_v_velocity,bc_right_u_velocity,bc_right_v_velocity
 real(wp)							::	bc_bottom_u_velocity,bc_bottom_v_velocity,bc_left_u_velocity,bc_left_v_velocity
+
+character(20),dimension(4)			::	bc_list_def,bc_list
 	
 !	--	Initial Conditions	
 character(20)						::	ic_type
@@ -37,6 +39,7 @@ real(wp)							::	x_coord,y_coord
 !	--	Iterative Properties
 real(wp)							::	relax_mom,relax_press,relax_press_cor
 real(wp)							::	conv_error
+integer								::	max_iter
 
 !	--	Things to solve for
 real(wp),dimension(:,:),allocatable	::	u,v,P
@@ -79,7 +82,7 @@ namelist /BOUNDARY_CONDITIONS/ bc_top_type,bc_bottom_type,bc_left_type,bc_right_
 	bc_bottom_u_velocity,bc_bottom_v_velocity,bc_left_u_velocity,bc_left_v_velocity
 namelist /INITIAL_CONDITIONS/ ic_type,ic_u,ic_v,ic_P
 namelist /MESH_PROPERTIES/ x_steps,y_steps,x_size,y_size
-namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press,relax_press_cor,conv_error
+namelist /ITERATIVE_PROPERTIES/ relax_mom,relax_press,relax_press_cor,conv_error,max_iter
 
 !	START CLOCK
 call system_clock(COUNT_RATE=time_scale,COUNT=start_time)
@@ -87,7 +90,7 @@ call system_clock(COUNT_RATE=time_scale,COUNT=start_time)
 !	--	Get namelist from user
 !write(*,*)'Enter input file:'
 !read(*,*)namelist_file_name
-namelist_file_name = 'inputs_lid'
+namelist_file_name = 'inputs_channel'
 
 !	--	Default namelist values
 ic_type = 'uniform'
@@ -110,6 +113,7 @@ relax_mom = 0.5_wp
 relax_press = 0.3_wp
 relax_press_cor = 1.2_wp
 conv_error = 1.0E-5_wp
+max_iter = 3000
 
 !	-- 	Read in namelists
 call system_clock(time_clicks)
@@ -152,75 +156,6 @@ allocate(AP_v(0:x_steps+1,0:y_steps+1))
 allocate(mu(0:x_steps+1,0:y_steps+1))
 allocate(mv(0:x_steps+1,0:y_steps+1))
 
-!	--	Initialize u, v, and P and mass flow rates
-call system_clock(time_clicks)
-write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Initializing momentum, pressure, and flow rates.'
-select case (ic_type)
-	case ("uniform")
-		u = ic_u
-		v = ic_v
-		P = ic_P
-	case default
-		call prog_error(100)
-endselect
-mu = 0.0_wp
-mv = 0.0_wp
-
-AP_u = 0.0_wp
-AP_v = 0.0_wp
-
-call system_clock(time_clicks)
-write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Setting up Dirichlet boundaries.'
-!	--	Set Dirichlet Boundaries
-!		--	Top boundary
-select case (bc_top_type)
-	case ('wall')
-		u(:,y_steps+1) = 0.0_wp
-		v(:,y_steps+1) = 0.0_wp
-	case ('velocity')
-		u(:,y_steps+1) = bc_top_u_velocity
-		v(:,y_steps+1) = bc_top_v_velocity
-	case default
-		call prog_error(101)
-endselect
-!		--	Right boundary
-select case (bc_right_type)
-	case ('wall')
-		u(x_steps+1,:) = 0.0_wp
-		v(x_steps+1,:) = 0.0_wp
-	case ('velocity')
-		u(x_steps+1,:) = bc_right_u_velocity
-		v(x_steps+1,:) = bc_right_v_velocity
-	case default
-		call prog_error(101)
-endselect
-!		--	Bottom boundary
-select case (bc_bottom_type)
-	case ('wall')
-		u(:,0) = 0.0_wp
-		v(:,0) = 0.0_wp
-		v(:,1) = 0.0_wp
-	case ('velocity')
-		u(:,0) = bc_bottom_u_velocity
-		v(:,0) = bc_bottom_v_velocity
-		v(:,1) = bc_bottom_v_velocity
-	case default
-		call prog_error(101)
-endselect
-!		--	Left boundary
-select case (bc_left_type)
-	case ('wall')
-		u(0,:) = 0.0_wp
-		u(1,:) = 0.0_wp
-		v(0,:) = 0.0_wp
-	case ('velocity')
-		u(0,:) = bc_left_u_velocity
-		u(1,:) = bc_left_u_velocity
-		v(0,:) = bc_left_v_velocity
-	case default
-		call prog_error(101)
-endselect
-
 !	--	Write axes to files for reference
 !		--	Pressure axes
 do k=1,max(x_steps,y_steps)
@@ -261,15 +196,107 @@ do k=1,(max(x_steps,y_steps)+1)
 	endif
 enddo
 
+!	--	Initialize u, v, and P and mass flow rates
+call system_clock(time_clicks)
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Initializing momentum, pressure, and flow rates.'
+select case (ic_type)
+	case ("uniform")
+		u = ic_u
+		v = ic_v
+		P = ic_P
+	case default
+		call prog_error(100)
+endselect
+mu = 0.0_wp
+mv = 0.0_wp
+
+AP_u = 0.0_wp
+AP_v = 0.0_wp
+
+call system_clock(time_clicks)
+write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Setting up Dirichlet boundaries.'
+!	BOUNDARY CONDITIONS
+!	--	Set Dirichlet Boundaries
+!		--	Top boundary
+select case (bc_top_type)
+	case ('wall')
+		u(:,y_steps+1) = 0.0_wp
+		v(:,y_steps+1) = 0.0_wp
+	case ('velocity')
+		u(:,y_steps+1) = bc_top_u_velocity
+		v(:,y_steps+1) = bc_top_v_velocity
+	case ('outlet')
+		u(:,y_steps+1) = 0.0_wp
+		v(:,y_steps+1) = 0.0_wp
+	case default
+		call prog_error(101)
+endselect
+!		--	Right boundary
+select case (bc_right_type)
+	case ('wall')
+		u(x_steps+1,:) = 0.0_wp
+		v(x_steps+1,:) = 0.0_wp
+	case ('velocity')
+		u(x_steps+1,:) = bc_right_u_velocity
+		v(x_steps+1,:) = bc_right_v_velocity
+	case ('outlet')
+		u(:,y_steps+1) = 0.0_wp
+		v(:,y_steps+1) = 0.0_wp
+	case default
+		call prog_error(101)
+endselect
+!		--	Bottom boundary
+select case (bc_bottom_type)
+	case ('wall')
+		u(:,0) = 0.0_wp
+		v(:,0) = 0.0_wp
+		v(:,1) = 0.0_wp
+	case ('velocity')
+		u(:,0) = bc_bottom_u_velocity
+		v(:,0) = bc_bottom_v_velocity
+		v(:,1) = bc_bottom_v_velocity
+	case ('outlet')
+		u(:,y_steps+1) = 0.0_wp
+		v(:,y_steps+1) = 0.0_wp
+	case default
+		call prog_error(101)
+endselect
+!		--	Left boundary
+select case (bc_left_type)
+	case ('wall')
+		u(0,:) = 0.0_wp
+		u(1,:) = 0.0_wp
+		v(0,:) = 0.0_wp
+	case ('velocity')
+		u(0,:) = bc_left_u_velocity
+		u(1,:) = bc_left_u_velocity
+		v(0,:) = bc_left_v_velocity
+	case ('outlet')
+		u(:,y_steps+1) = 0.0_wp
+		v(:,y_steps+1) = 0.0_wp
+	case default
+		call prog_error(101)
+endselect
+
+!	-- Store Boundary Conditions in an array
+bc_list_def(1) = 'top'
+bc_list_def(2) = 'right'
+bc_list_def(3) = 'bottom'
+bc_list_def(4) = 'left'
+bc_list(1) = bc_top_type
+bc_list(2) = bc_right_type
+bc_list(3) = bc_bottom_type
+bc_list(4) = bc_left_type
+
 !	BEGIN SOLUTION
 call system_clock(time_clicks)
 write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Solving navier stokes equations.'
 cont_rms_old = 0.0_wp
-do k=1,3000
+do k=1,max_iter
 	!	--	MASS FLOW RATES
 	call mass_flow_rates(mu,mv,u,v,P,density,viscosity,dx,dy)
 	!	--	U-MOMENTUM
-	call umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_u)
+	call umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,bc_list,AP_u)
 	!	--	V-MOMENTUM
 	call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_v)
 	!	--	PRESSURES
@@ -277,7 +304,7 @@ do k=1,3000
 	
 	cont_rms = rms(continuity)
 	write(continuity_file,*)k,cont_rms,abs(cont_rms - cont_rms_old)
-	!write(*,*)k,cont_rms,abs(cont_rms - cont_rms_old)
+	write(*,*)k,cont_rms,abs(cont_rms - cont_rms_old)
 	
 	if (abs(cont_rms - cont_rms_old) < conv_error) then
 		conv_satisfied = conv_satisfied + 1
@@ -291,6 +318,7 @@ do k=1,3000
 enddo
 call system_clock(time_clicks)
 write(*,"(F5.2,A,3X,A,ES10.3)")real(time_clicks-start_time)/real(time_scale),'s','-->Continuity converged to ',cont_rms
+if (k >= max_iter) k = max_iter
 allocate(continuity_data(k))
 allocate(iteration_data(k))
 

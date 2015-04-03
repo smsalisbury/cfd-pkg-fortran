@@ -5,9 +5,9 @@
 
 &BOUNDARY_CONDITIONS
 	bc_top_type		=	'wall'
-	bc_right_type	=	'velocity'
+	bc_right_type	=	'outlet'
 	bc_bottom_type	=	'wall'
-	bc_left_type	=	'wall'
+	bc_left_type	=	'velocity'
 	
 	bc_left_u_velocity	=	1
 /
@@ -20,9 +20,9 @@
 /
 
 &MESH_PROPERTIES
-	x_steps			=	40
+	x_steps			=	200
 	y_steps			=	40
-	x_size			=	1
+	x_size			=	5
 	y_size			=	1
 /
 
@@ -31,4 +31,5 @@
 	relax_press		=	0.3
 	relax_press_cor	=	1.2
 	conv_error		=	1.0E-10
+	max_iter 		= 	100
 /
