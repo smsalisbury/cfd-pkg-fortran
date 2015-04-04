@@ -9,7 +9,7 @@
 FC = gfortran
 
 # Directories
-MOD_DIR = c:/cfd-pkg-fortran/modules
+MOD_DIR = /home/spencer/cfd-pkg-fortran/modules
 OBJ_DIR = obj
 INCLUDES = -I. -I$(MOD_DIR)
 

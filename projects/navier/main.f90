@@ -303,7 +303,7 @@ do k=1,y_steps
 enddo
 
 !	PLOTS
-call vector_plot(x_g,y_g,u_g,v_g,3.0_wp)
+call vector_plot(x_g,y_g,u_g,v_g)
 
 !	DEALLOCATE ARRAYS
 deallocate(u)

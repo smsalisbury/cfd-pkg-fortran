@@ -1,6 +1,6 @@
 &FLUID_PROPERTIES
-	density			=	1.0
-	viscosity		=	1.0
+	density			=	100
+	viscosity		=	1
 /
 
 &BOUNDARY_CONDITIONS
