@@ -1,0 +1,35 @@
+&FLUID_PROPERTIES
+	density			=	1.0
+	viscosity		=	0.01
+/
+
+&BOUNDARY_CONDITIONS
+	bc_top_type		=	'wall'
+	bc_right_type	=	'outlet'
+	bc_bottom_type	=	'wall'
+	bc_left_type	=	'velocity'
+	
+	bc_left_u_velocity	=	1
+/
+
+&INITIAL_CONDITIONS
+	ic_type			=	'uniform'
+	ic_u			=	0.0
+	ic_v			=	0.0
+	ic_P			=	0.0
+/
+
+&MESH_PROPERTIES
+	x_steps			=	200
+	y_steps			=	40
+	x_size			=	5
+	y_size			=	1
+/
+
+&ITERATIVE_PROPERTIES
+	relax_mom		=	0.5
+	relax_press		=	0.3
+	relax_press_cor	=	1.2
+	conv_error		=	1.0E-10
+	max_iter 		= 	100
+/

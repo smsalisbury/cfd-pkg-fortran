@@ -49,7 +49,7 @@ contains
 		enddo
 	end subroutine mass_flow_rates
 
-	subroutine umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,store_ap)
+	subroutine umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,bc_list,store_ap)
 		!	-------------------------------------
 		!	This subroutine solves the u-momentum
 		!	component of the Navier-Stokes Equations.
@@ -57,13 +57,14 @@ contains
 		!	-------------------------------------
 		
 		!	INPUTS
-		real(wp),intent(in)					::	density		!	Fluid density
-		real(wp),intent(in)					::	viscosity	!	Fluid viscosity
-		real(wp),intent(in)					::	dx,dy		!	Mesh parameters
-		real(wp),dimension(:,:),intent(in)	::	v			!	v-velocities (not used)
-		real(wp),dimension(:,:),intent(in)	::	P			!	Pressures
-		real(wp),dimension(:,:),intent(in)	::	mu,mv		!	Mass flow rates
-		real(wp),intent(in)					::	rel			!	Relaxation factor
+		real(wp),intent(in)						::	density		!	Fluid density
+		real(wp),intent(in)						::	viscosity	!	Fluid viscosity
+		real(wp),intent(in)						::	dx,dy		!	Mesh parameters
+		real(wp),dimension(:,:),intent(in)		::	v			!	v-velocities (not used)
+		real(wp),dimension(:,:),intent(in)		::	P			!	Pressures
+		real(wp),dimension(:,:),intent(in)		::	mu,mv		!	Mass flow rates
+		real(wp),intent(in)						::	rel			!	Relaxation factor
+		character(*),dimension(:),intent(in)	::	bc_list		!	A vector list of bc_types
 		
 		!	OUTPUTS
 		real(wp),dimension(:,:),intent(out)	::	store_ap	!	an array to store the ap values
@@ -120,7 +121,22 @@ contains
 					Pe = P(i_count,j_count)
 					Pw = P(i_count-1,j_count)
 					
-					u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					!	-- Handle outlet boundary conditions (if applicable)
+					if (j == y_steps .AND. trim(bc_list(1)) == 'outlet') then
+						UN = u(i,j)
+						u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					elseif (i == x_steps .AND. trim(bc_list(2)) == 'outlet') then
+						UE = u(i,j)
+						u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					elseif (j == 0 .AND. trim(bc_list(3)) == 'outlet') then
+						US = u(i,j)
+						u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					elseif (i == 0 .AND. trim(bc_list(4)) == 'outlet') then
+						UW = u(i,j)
+						u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					else
+						u(i,j) = (1.0_wp-rel)*u(i,j) + (1.0_wp/AP)*(AE*UE + AW*UW + AN*UN + AS*US + (Pw-Pe)*dy)
+					endif
 				enddo
 			enddo
 		enddo

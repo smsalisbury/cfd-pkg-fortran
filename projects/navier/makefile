@@ -9,7 +9,7 @@
 FC = gfortran
 
 # Directories
-MOD_DIR = /home/spencer/cfd-pkg-fortran/modules
+MOD_DIR = ../../modules
 OBJ_DIR = obj
 INCLUDES = -I. -I$(MOD_DIR)
 
@@ -17,7 +17,7 @@ INCLUDES = -I. -I$(MOD_DIR)
 FCFLAGS = -g -O2 -fbounds-check
 
 # Program name
-PROGRAM = a.out
+PROGRAM = d.out
 MOD_OBJECTS = config.o file_io.o gnuplot.o navier_stokes_solvers.o main.o
 
 # ======================

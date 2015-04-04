@@ -6,7 +6,7 @@ implicit none
 character(5),parameter			::	plot_dir = "plots"
 
 contains
-	subroutine vector_plot(x,y,u,v,mag_in)
+	subroutine vector_plot2D(x,y,u,v,mag_in)
 		!	--------------------------
 		!	This subroutine uses gnuplot to plot
 		!	a 2D vector plot. x and y are vectors
@@ -31,7 +31,10 @@ contains
 		real(wp)								::	max_u_mag, max_v_mag, max_mag
 		real(wp)								::	avg_dx,avg_dy
 		
-		real(wp)								::	mag	
+		real(wp)								::	mag
+		
+		integer,parameter						::	img_height = 480
+		real(wp)								::	aspect_ratio !	x to y
 		
 		!	VALIDATION
 		!	--	Sizes must match
@@ -59,6 +62,9 @@ contains
 		else
 			mag = 1.0_wp
 		endif
+		
+		!	--	Set image aspect ratio
+		aspect_ratio = maxval(x)/maxval(y)
 		
 		!	FIND MAX u AND v
 		max_u_mag = maxval(u)
@@ -91,7 +97,7 @@ contains
 		
 		!	WRITE GNUPLOT SCRIPT
 		script_file = file_open(trim(plot_dir) // '/script.dat')
-		write(script_file,*)"set terminal png"
+		write(script_file,*)"set terminal png size", int(img_height*aspect_ratio), "," , img_height
 		write(script_file,*)"set output '" // trim(plot_dir) // "/vector.png'"
 		write(script_file,*)"plot '" // trim(plot_dir) // "/vector.dat' using 1:2:3:4 with vectors head filled lt 2 notitle"
 		close(script_file)
@@ -100,10 +106,153 @@ contains
 		ret = system("gnuplot " // trim(plot_dir) // "/script.dat")
 	
 		!	CLEANUP
-		call rm_file(trim(plot_dir) // '/script.dat')
+		! call rm_file(trim(plot_dir) // '/script.dat')
 		call rm_file(trim(plot_dir) // '/vector.dat')
-	end subroutine vector_plot
+	end subroutine vector_plot2D
 
+	subroutine contour_plot2D(x,y,values)
+		!	--------------------------
+		!	This subroutine uses gnuplot to plot
+		!	a 2D contour plot. x and y are vectors
+		!	of the x and y coordinates, and values is
+		! 	a matrix of the values to plot.
+		!	--------------------------
+		
+		!	INPUTS
+		real(wp),dimension(:),intent(in)		::	x,y
+		real(wp),dimension(:,:),intent(in)		::	values
+		
+		!	INTERNAL VARIABLES
+		integer									::	values_x_size, values_y_size
+		integer									::	x_size, y_size
+		integer									::	data_file
+		integer									::	script_file
+		
+		integer									::	i,j
+		integer									::	ret
+		
+		real(wp)								::	max_values
+		real(wp)								::	min_values
+		
+		integer,parameter						::	img_height = 480
+		real(wp)								::	aspect_ratio !	x to y
+		
+		!	VALIDATION
+		!	--	Sizes must match
+		values_x_size = size(values,1)
+		values_y_size = size(values,2)
+		
+		if (values_x_size /= size(x)) then
+			call gnuplot_error(104)
+		elseif (values_y_size /= size(y)) then
+			call gnuplot_error(105)
+		endif
+		
+		x_size = size(x)
+		y_size = size(y)
+		
+		!	FIND MAX AND MIN values
+		max_values = maxval(values)
+		min_values = minval(values)
+		
+		!	--	Set image aspect ratio
+		aspect_ratio = maxval(x)/maxval(y)
+		
+		!	WRITE DATA TO TEMPORARY FILE
+		!	--	The format for gnuplot is x,y,deltax,deltay
+		call create_dir(trim(plot_dir))
+		data_file = file_open(trim(plot_dir) // '/contour.dat')
+		do i=1,x_size
+			do j=1,y_size
+				write(data_file,*)x(i),y(j),values(i,j)
+			enddo
+		enddo		
+		close(data_file)
+		
+		!	WRITE GNUPLOT SCRIPT
+		script_file = file_open(trim(plot_dir) // '/script.dat')
+		write(script_file,*)"set terminal png size", int(img_height*aspect_ratio), "," , img_height
+		write(script_file,*)"set parametric"
+		write(script_file,*)"set contour base"
+		write(script_file,*)"set dgrid3d"
+		write(script_file,*)"set view 0,0,1"
+		write(script_file,*)"unset surface"
+		write(script_file,*)"set cntrparam levels 10"
+		write(script_file,*)"set output '" // trim(plot_dir) // "/contour.png'"
+		write(script_file,*)"splot '" // trim(plot_dir) // "/contour.dat' using 1:2:3 with line notitle"
+		close(script_file)
+		
+		!	PLOT GNUPLOT
+		ret = system("gnuplot " // trim(plot_dir) // "/script.dat")
+	
+		!	CLEANUP
+		call rm_file(trim(plot_dir) // '/script.dat')
+		call rm_file(trim(plot_dir) // '/contour.dat')
+	end subroutine contour_plot2D
+
+	subroutine scatter_plot2D(x_values,y_values,aspect_ratio_in)
+		!	--------------------------
+		!	This subroutine uses gnuplot to plot
+		!	a 2D scatter plot. x_values and y_values
+		!	are vectors.
+		!	--------------------------
+		
+		!	INPUTS
+		real(wp),dimension(:),intent(in)		::	x_values,y_values
+		real(wp),intent(in),optional			::	aspect_ratio_in
+		
+		!	INTERNAL VARIABLES
+		integer									::	x_size, y_size
+		integer									::	data_file
+		integer									::	script_file
+		
+		integer									::	i,j
+		integer									::	ret
+		
+		integer,parameter						::	img_height = 480
+		real(wp)								::	aspect_ratio !	x to y
+		
+		!	DEFAULTS
+		!	--	Aspect Ratio
+		if (present(aspect_ratio_in)) then
+			aspect_ratio = aspect_ratio_in
+		else
+			aspect_ratio = 1.0_wp
+		endif
+		
+		!	VALIDATION
+		!	--	Sizes must match		
+		x_size = size(x_values)
+		y_size = size(y_values)
+		
+		if (x_size /= y_size) then
+			call gnuplot_error(106)
+		endif
+		
+		!	WRITE DATA TO TEMPORARY FILE
+		!	--	The format for gnuplot is x,y,deltax,deltay
+		call create_dir(trim(plot_dir))
+		data_file = file_open(trim(plot_dir) // '/scatter.dat')
+		do i=1,x_size
+			write(data_file,*)x_values(i),y_values(i)
+		enddo		
+		close(data_file)
+		
+		!	WRITE GNUPLOT SCRIPT
+		script_file = file_open(trim(plot_dir) // '/script.dat')
+		write(script_file,*)"set terminal png size", int(real(img_height,wp)*aspect_ratio), "," , img_height
+		write(script_file,*)"set output '" // trim(plot_dir) // "/scatter.png'"
+		write(script_file,*)"plot '" // trim(plot_dir) // "/scatter.dat' using 1:2 with line notitle"
+		close(script_file)
+		
+		!	PLOT GNUPLOT
+		ret = system("gnuplot " // trim(plot_dir) // "/script.dat")
+	
+		!	CLEANUP
+		call rm_file(trim(plot_dir) // '/script.dat')
+		call rm_file(trim(plot_dir) // '/scatter.dat')
+	end subroutine scatter_plot2D
+	
 	subroutine gnuplot_error(code)
 		!	----------------------------
 		!	This subroutine handles the errors
@@ -117,22 +266,37 @@ contains
 		select case (code)
 			case (100)
 				write(*,*)"GNUPLOT MODULE ERROR:"
-				write(*,*)"Dimensions of u don't match with dimensions of the x vector."
+				write(*,*)"2D Vector Plot: Dimensions of u don't match with dimensions of the x vector."
 				write(*,*)"Aborting..."
 				stop
 			case (101)
 				write(*,*)"GNUPLOT MODULE ERROR:"
-				write(*,*)"Dimensions of u don't match with dimensions of the y vector."
+				write(*,*)"2D Vector Plot: Dimensions of u don't match with dimensions of the y vector."
 				write(*,*)"Aborting..."
 				stop
 			case (102)
 				write(*,*)"GNUPLOT MODULE ERROR:"
-				write(*,*)"Dimensions of v don't match with dimensions of the x vector."
+				write(*,*)"2D Vector Plot: Dimensions of v don't match with dimensions of the x vector."
 				write(*,*)"Aborting..."
 				stop
 			case (103)
 				write(*,*)"GNUPLOT MODULE ERROR:"
-				write(*,*)"Dimensions of v don't match with dimensions of the y vector."
+				write(*,*)"2D Vector Plot: Dimensions of v don't match with dimensions of the y vector."
+				write(*,*)"Aborting..."
+				stop
+			case (104)
+				write(*,*)"GNUPLOT MODULE ERROR:"
+				write(*,*)"2D Contour Plot: Dimensions of values don't match with dimensions of the x vector."
+				write(*,*)"Aborting..."
+				stop
+			case (105)
+				write(*,*)"GNUPLOT MODULE ERROR:"
+				write(*,*)"2D Contour Plot: Dimensions of values don't match with dimensions of the y vector."
+				write(*,*)"Aborting..."
+				stop
+			case (106)
+				write(*,*)"GNUPLOT MODULE ERROR:"
+				write(*,*)"2D Scatter Plot: Dimensions of x and y don't match."
 				write(*,*)"Aborting..."
 				stop
 			case default
