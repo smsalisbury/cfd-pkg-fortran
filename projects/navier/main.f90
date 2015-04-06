@@ -298,7 +298,7 @@ do k=1,max_iter
 	!	--	U-MOMENTUM
 	call umomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,bc_list,AP_u)
 	!	--	V-MOMENTUM
-	call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,AP_v)
+	call vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,relax_mom,bc_list,AP_v)
 	!	--	PRESSURES
 	call pressure(mu,mv,u,v,P,density,viscosity,dx,dy,relax_press_cor,relax_press,AP_u,AP_v,continuity)
 	

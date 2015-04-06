@@ -17,8 +17,8 @@ INCLUDES = -I. -I$(MOD_DIR)
 FCFLAGS = -g -O2 -fbounds-check
 
 # Program name
-PROGRAM = d.out
-MOD_OBJECTS = config.o file_io.o gnuplot.o navier_stokes_solvers.o main.o
+PROGRAM = a.out
+MOD_OBJECTS = config.o file_io.o gnuplot.o array.o navier_stokes_solvers.o main.o
 
 # ======================
 # MAKE COMMANDS
@@ -46,6 +46,9 @@ file_io.o:
 	
 gnuplot.o:
 	$(FC) $(FCFLAGS) -c $(FILENAME) $(MOD_DIR)/gnuplot.f90
+	
+array.o:
+	$(FC) $(FCFLAGS) -c $(FILENAME) $(MOD_DIR)/array.f90
 
 # Special - make clean
 clean:

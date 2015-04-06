@@ -1,5 +1,6 @@
 module navier_stokes_solvers
 use config
+use array
 implicit none
 
 contains
@@ -82,6 +83,9 @@ contains
 		real(wp)							::	Pe,Pw					!	Local pressures
 		real(wp)							::	UN,UE,US,UW				!	Local velocities
 		
+		integer								::	input_side,output_side
+		real(wp)							::	input_m_dot,output_m_dot
+		
 		!	CALCULATE NEW U_MOMENTUM
 		x_steps = size(u,1)-1
 		y_steps = size(u,2)-1
@@ -140,9 +144,41 @@ contains
 				enddo
 			enddo
 		enddo
+		
+		!	SATISFY GLOBAL CONSERVATION
+		input_side = array_search_char('velocity',bc_list)
+		output_side = array_search_char('output',bc_list)
+		
+		select case (input_side)
+			case (1)
+				input_m_dot = sum(mv(:,y_steps))/size(mv(:,y_steps))
+			case (2)
+				input_m_dot = sum(mu(x_steps,:))/size(mu(x_steps,:))
+			case (3)
+				input_m_dot = sum(mv(:,1))/size(mv(:,1))
+			case (4)
+				input_m_dot = sum(mu(1,:))/size(mu(1,:))
+			case default
+		end select
+		
+		select case (output_side)
+			case (1)
+				output_m_dot = sum(mv(:,y_steps))/size(mv(:,y_steps))
+				u(:,y_steps) = (input_m_dot/output_m_dot)*u(:,y_steps)
+			case (2)
+				output_m_dot = sum(mu(x_steps,:))/size(mu(x_steps,:))
+				u(x_steps,:) = (input_m_dot/output_m_dot)*u(x_steps,:)
+			case (3)
+				output_m_dot = sum(mv(:,1))/size(mv(:,1))
+				u(:,1) = (input_m_dot/output_m_dot)*u(:,1)
+			case (4)
+				output_m_dot = sum(mu(1,:))/size(mu(1,:))
+				u(1,:) = (input_m_dot/output_m_dot)*u(1,:)
+			case default
+		end select
 	end subroutine umomentum
 
-	subroutine vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,store_ap)
+	subroutine vmomentum(mu,mv,u,v,P,density,viscosity,dx,dy,rel,bc_list,store_ap)
 		!	-------------------------------------
 		!	This subroutine solves the v-momentum
 		!	component of the Navier-Stokes Equations.
@@ -150,13 +186,14 @@ contains
 		!	-------------------------------------
 		
 		!	INPUTS
-		real(wp),intent(in)					::	density		!	Fluid density
-		real(wp),intent(in)					::	viscosity	!	Fluid viscosity
-		real(wp),intent(in)					::	dx,dy		!	Mesh parameters
-		real(wp),dimension(:,:),intent(in)	::	u			!	u-velocities (not used)
-		real(wp),dimension(:,:),intent(in)	::	P			!	Pressures
-		real(wp),dimension(:,:),intent(in)	::	mu,mv		!	Mass flow rates
-		real(wp),intent(in)					::	rel			!	Relaxation factor
+		real(wp),intent(in)						::	density		!	Fluid density
+		real(wp),intent(in)						::	viscosity	!	Fluid viscosity
+		real(wp),intent(in)						::	dx,dy		!	Mesh parameters
+		real(wp),dimension(:,:),intent(in)		::	u			!	u-velocities (not used)
+		real(wp),dimension(:,:),intent(in)		::	P			!	Pressures
+		real(wp),dimension(:,:),intent(in)		::	mu,mv		!	Mass flow rates
+		real(wp),intent(in)						::	rel			!	Relaxation factor
+		character(*),dimension(:),intent(in)	::	bc_list		!	A vector list of bc_types
 		
 		!	OUTPUTS
 		real(wp),dimension(:,:),intent(out)	::	store_ap	!	an array to store the ap values
@@ -213,7 +250,22 @@ contains
 					Pn = P(i_count,j_count)
 					Ps = P(i_count,j_count-1)
 					
-					v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					!	-- Handle outlet boundary conditions (if applicable)
+					if (j == y_steps .AND. trim(bc_list(1)) == 'outlet') then
+						VN = v(i,j)
+						v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					elseif (i == x_steps .AND. trim(bc_list(2)) == 'outlet') then
+						VE = v(i,j)
+						v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					elseif (j == 0 .AND. trim(bc_list(3)) == 'outlet') then
+						VS = v(i,j)
+						v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					elseif (i == 0 .AND. trim(bc_list(4)) == 'outlet') then
+						VW = v(i,j)
+						v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					else
+						v(i,j) = (1.0_wp-rel)*v(i,j) + (1.0_wp/AP)*(AE*VE + AW*VW + AN*VN + AS*VS + (Ps-Pn)*dx)
+					endif
 				enddo
 			enddo
 		enddo

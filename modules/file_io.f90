@@ -122,7 +122,7 @@ contains
     
     ! MAKE DIRECTORY
     if (.NOT. dirExists) then
-      call system('mkdir -p '//trim(directory))
+      call system('mkdir '//trim(directory))
     end if
   end subroutine create_dir
   
