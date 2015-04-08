@@ -14,7 +14,7 @@
 
 &INITIAL_CONDITIONS
 	ic_type			=	'uniform'
-	ic_u			=	0.0
+	ic_u			=	1.0
 	ic_v			=	0.0
 	ic_P			=	0.0
 /
@@ -31,5 +31,5 @@
 	relax_press		=	0.3
 	relax_press_cor	=	1.2
 	conv_error		=	1.0E-10
-	max_iter 		= 	100
+	max_iter 		= 	1000
 /

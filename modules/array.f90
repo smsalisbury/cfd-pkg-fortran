@@ -17,7 +17,7 @@ contains
 		array_search_char = -1
 		
 		do i=1,size(haystack)
-			if (needle .EQ. haystack(i)) then
+			if (trim(needle) .EQ. trim(haystack(i))) then
 				array_search_char = i
 				exit
 			endif

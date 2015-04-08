@@ -17,7 +17,7 @@ INCLUDES = -I. -I$(MOD_DIR)
 FCFLAGS = -g -O2 -fbounds-check
 
 # Program name
-PROGRAM = a.out
+PROGRAM = b.out
 MOD_OBJECTS = config.o file_io.o gnuplot.o array.o navier_stokes_solvers.o main.o
 
 # ======================

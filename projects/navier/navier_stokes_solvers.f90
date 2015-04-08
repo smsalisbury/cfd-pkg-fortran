@@ -147,7 +147,7 @@ contains
 		
 		!	SATISFY GLOBAL CONSERVATION
 		input_side = array_search_char('velocity',bc_list)
-		output_side = array_search_char('output',bc_list)
+		output_side = array_search_char('outlet',bc_list)
 		
 		select case (input_side)
 			case (1)
@@ -164,16 +164,16 @@ contains
 		select case (output_side)
 			case (1)
 				output_m_dot = sum(mv(:,y_steps))/size(mv(:,y_steps))
-				u(:,y_steps) = (input_m_dot/output_m_dot)*u(:,y_steps)
+				if (abs(output_m_dot) > 1.0E-5_wp) u(:,y_steps) = (input_m_dot/output_m_dot)*u(:,y_steps)
 			case (2)
 				output_m_dot = sum(mu(x_steps,:))/size(mu(x_steps,:))
-				u(x_steps,:) = (input_m_dot/output_m_dot)*u(x_steps,:)
+				if (abs(output_m_dot) > 1.0E-5_wp) u(x_steps,:) = (input_m_dot/output_m_dot)*u(x_steps,:)
 			case (3)
 				output_m_dot = sum(mv(:,1))/size(mv(:,1))
-				u(:,1) = (input_m_dot/output_m_dot)*u(:,1)
+				if (abs(output_m_dot) > 1.0E-5_wp) u(:,1) = (input_m_dot/output_m_dot)*u(:,1)
 			case (4)
 				output_m_dot = sum(mu(1,:))/size(mu(1,:))
-				u(1,:) = (input_m_dot/output_m_dot)*u(1,:)
+				if (abs(output_m_dot) > 1.0E-5_wp) u(1,:) = (input_m_dot/output_m_dot)*u(1,:)
 			case default
 		end select
 	end subroutine umomentum

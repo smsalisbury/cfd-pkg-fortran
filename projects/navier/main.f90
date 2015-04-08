@@ -90,7 +90,7 @@ call system_clock(COUNT_RATE=time_scale,COUNT=start_time)
 !	--	Get namelist from user
 !write(*,*)'Enter input file:'
 !read(*,*)namelist_file_name
-namelist_file_name = 'inputs_channel'
+namelist_file_name = 'inputs_lid'
 
 !	--	Default namelist values
 ic_type = 'uniform'

@@ -29,6 +29,7 @@ contains
 		integer									::	ret
 		
 		real(wp)								::	max_u_mag, max_v_mag, max_mag
+		real(wp)								::	x_mag, y_mag
 		real(wp)								::	avg_dx,avg_dy
 		
 		real(wp)								::	mag
@@ -90,7 +91,9 @@ contains
 		data_file = file_open(trim(plot_dir) // '/vector.dat')
 		do i=1,x_size
 			do j=1,y_size
-				write(data_file,*)x(i),y(j),mag*(u(i,j)/max_mag)*avg_dx,mag*(v(i,j)/max_mag)*avg_dx
+				x_mag = mag*(u(i,j)/max_mag)*avg_dx
+				y_mag = mag*(v(i,j)/max_mag)*avg_dy
+				write(data_file,*)x(i),y(j),x_mag,y_mag,sqrt(x_mag**2 + y_mag**2)
 			enddo
 		enddo		
 		close(data_file)
@@ -107,6 +110,8 @@ contains
 	
 		!	CLEANUP
 		! call rm_file(trim(plot_dir) // '/script.dat')
+		call system('mv ' // trim(plot_dir) // '/script.dat ' // trim(plot_dir) // '/script2.dat')
+		call system('mv ' // trim(plot_dir) // '/vector.dat ' // trim(plot_dir) // '/vector2.dat')
 		call rm_file(trim(plot_dir) // '/vector.dat')
 	end subroutine vector_plot2D
 
