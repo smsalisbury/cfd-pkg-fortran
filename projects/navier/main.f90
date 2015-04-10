@@ -361,7 +361,7 @@ call contour_plot2D(x_g,y_g,arrays_mag(u_g,v_g))
 
 call system_clock(time_clicks)
 write(*,"(F5.2,A,3X,A)")real(time_clicks-start_time)/real(time_scale),'s','Graphing convergence.'
-call scatter_plot2D(iteration_data,continuity_data,2.0)
+call scatter_plot2D(iteration_data,continuity_data,2.0_wp)
 
 !	DEALLOCATE ARRAYS
 deallocate(u)

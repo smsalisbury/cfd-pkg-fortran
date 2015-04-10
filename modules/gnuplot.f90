@@ -29,7 +29,7 @@ contains
 		integer									::	ret
 		
 		real(wp)								::	max_u_mag, max_v_mag, max_mag
-		real(wp)								::	x_mag, y_mag
+		real(wp)								::	x_mag, y_mag, v_mag
 		real(wp)								::	avg_dx,avg_dy
 		
 		real(wp)								::	mag
@@ -68,8 +68,8 @@ contains
 		aspect_ratio = maxval(x)/maxval(y)
 		
 		!	FIND MAX u AND v
-		max_u_mag = maxval(u)
-		max_v_mag = maxval(v)
+		max_u_mag = maxval(abs(u))
+		max_v_mag = maxval(abs(v))
 		max_mag = max(max_u_mag,max_v_mag)
 		
 		!	FIND avg_dx AND avg_dy
@@ -93,7 +93,7 @@ contains
 			do j=1,y_size
 				x_mag = mag*(u(i,j)/max_mag)*avg_dx
 				y_mag = mag*(v(i,j)/max_mag)*avg_dy
-				write(data_file,*)x(i),y(j),x_mag,y_mag,sqrt(x_mag**2 + y_mag**2)
+				write(data_file,*)x(i),y(j),x_mag,y_mag,sqrt(u(i,j)**2 + v(i,j)**2)
 			enddo
 		enddo		
 		close(data_file)
@@ -102,16 +102,19 @@ contains
 		script_file = file_open(trim(plot_dir) // '/script.dat')
 		write(script_file,*)"set terminal png size", int(img_height*aspect_ratio), "," , img_height
 		write(script_file,*)"set output '" // trim(plot_dir) // "/vector.png'"
-		write(script_file,*)"plot '" // trim(plot_dir) // "/vector.dat' using 1:2:3:4 with vectors head filled lt 2 notitle"
+		write(script_file,*)"set cbrange [0:", max_mag, "]"
+		write(script_file,*)"set palette rgbformulae 33,13,10"
+		write(script_file,*)"plot '" // trim(plot_dir) // &
+							"/vector.dat' using 1:2:3:4:5 with vectors notitle linecolor palette z"
 		close(script_file)
 		
 		!	PLOT GNUPLOT
 		ret = system("gnuplot " // trim(plot_dir) // "/script.dat")
 	
 		!	CLEANUP
-		! call rm_file(trim(plot_dir) // '/script.dat')
-		call system('mv ' // trim(plot_dir) // '/script.dat ' // trim(plot_dir) // '/script2.dat')
-		call system('mv ' // trim(plot_dir) // '/vector.dat ' // trim(plot_dir) // '/vector2.dat')
+		! call system('mv ' // trim(plot_dir) // '/script.dat ' // trim(plot_dir) // '/script2.dat')
+		! call system('mv ' // trim(plot_dir) // '/vector.dat ' // trim(plot_dir) // '/vector2.dat')
+		call rm_file(trim(plot_dir) // '/script.dat')
 		call rm_file(trim(plot_dir) // '/vector.dat')
 	end subroutine vector_plot2D
 
